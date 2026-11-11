@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบบันทึกหลักฐานและเอกสาร (Unified Workflow System)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js สำหรับทำ Interactive Dashboard -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800" x-data="workflowApp()">
+
+    <!-- Header Navigation -->
+    <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <span class="text-2xl">📦</span>
+                <div>
+                    <h1 class="text-lg font-bold">ระบบบันทึกหลักฐานและตรวจสอบเอกสาร</h1>
+                    <p class="text-xs text-indigo-200">Unified Role Mode (ไม่ต้องเข้าสู่ระบบซ้ำซ้อน - พร้อมใช้งานบน GitHub Pages)</p>
+                </div>
+            </div>
+            <div>
+                <button @click="openNewModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow transition flex items-center space-x-1">
+                    <span>➕ สร้างเอกสารใหม่</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        
+        <!-- Dashboard Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">เอกสารทั้งหมด</p>
+                    <h3 class="text-2xl font-bold text-slate-700" x-text="documents.length">0</h3>
+                </div>
+                <div class="p-3 bg-indigo-50 text-indigo-600 rounded-lg text-xl">📄</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">รอตรวจสอบ (Pending)</p>
+                    <h3 class="text-2xl font-bold text-amber-600" x-text="documents.filter(d => d.status === 'PENDING_AUDIT').length">0</h3>
+                </div>
+                <div class="p-3 bg-amber-50 text-amber-600 rounded-lg text-xl">⏳</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">ตีกลับเพื่อแก้ไข (Rejected)</p>
+                    <h3 class="text-2xl font-bold text-rose-600" x-text="documents.filter(d => d.status === 'REJECTED').length">0</h3>
+                </div>
+                <div class="p-3 bg-rose-50 text-rose-600 rounded-lg text-xl">⚠️</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">ผ่านการตรวจสอบ (Verified)</p>
+                    <h3 class="text-2xl font-bold text-emerald-600" x-text="documents.filter(d => d.status === 'VERIFIED').length">0</h3>
+                </div>
+                <div class="p-3 bg-emerald-50 text-emerald-600 rounded-lg text-xl">✅</div>
+            </div>
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="w-full md:w-1/3">
+                <input type="text" x-model="searchQuery" placeholder="🔍 ค้นหาเลขที่เอกสาร, ชื่อ Supplier..." class="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div class="flex flex-wrap gap-2 w-full md:w-auto">
+                <button @click="currentFilter = 'ALL'" :class="currentFilter === 'ALL' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'" class="px-3 py-1.5 rounded-lg text-xs font-medium transition">ทั้งหมด</button>
+                <button @click="currentFilter = 'PENDING_AUDIT'" :class="currentFilter === 'PENDING_AUDIT' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600'" class="px-3 py-1.5 rounded-lg text-xs font-medium transition">รอตรวจ</button>
+                <button @click="currentFilter = 'REJECTED'" :class="currentFilter === 'REJECTED' ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-600'" class="px-3 py-1.5 rounded-lg text-xs font-medium transition">ตีกลับแก้ไข</button>
+                <button @click="currentFilter = 'VERIFIED'" :class="currentFilter === 'VERIFIED' ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-600'" class="px-3 py-1.5 rounded-lg text-xs font-medium transition">เสร็จสิ้น</button>
+            </div>
+        </div>
+
+        <!-- Documents Table List -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-100">
+                            <th class="p-4">เลขที่เอกสาร / ประเภท</th>
+                            <th class="p-4">Supplier / ผู้บันทึก</th>
+                            <th class="p-4">รายละเอียดสินค้า</th>
+                            <th class="p-4">หลักฐาน (Files/Images)</th>
+                            <th class="p-4">สถานะ</th>
+                            <th class="p-4 text-center">จัดการ / ตรวจสอบ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-sm">
+                        <template x-for="doc in filteredDocuments" :key="doc.doc_id">
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="p-4">
+                                    <span class="font-bold text-indigo-600" x-text="doc.doc_id"></span>
+                                    <p class="text-xs text-slate-400" x-text="doc.date + ' ' + doc.time"></p>
+                                </td>
+                                <td class="p-4">
+                                    <span class="font-medium text-slate-700" x-text="doc.supplier_name"></span>
+                                    <p class="text-xs text-slate-400" x-text="'ผู้บันทึก: ' + doc.creator"></p>
+                                </td>
+                                <td class="p-4">
+                                    <template x-for="item in doc.items">
+                                        <div class="text-xs">
+                                            <span class="font-medium" x-text="item.product_name"></span>: 
+                                            <span x-text="item.received + ' ' + item.unit"></span>
+                                            <span class="text-rose-500 font-bold" x-show="item.damaged"> (เสียหาย: <span x-text="item.damaged"></span>)</span>
+                                        </div>
+                                    </template>
+                                </td>
+                                <td class="p-4">
+                                    <div class="flex gap-1">
+                                        <template x-for="file in doc.evidence_files">
+                                            <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded border border-slate-200 flex items-center space-x-1">
+                                                <span>📎</span> <span x-text="file.name"></span>
+                                            </span>
+                                        </template>
+                                    </div>
+                                </td>
+                                <td class="p-4">
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold"
+                                        :class="{
+                                            'bg-amber-100 text-amber-700': doc.status === 'PENDING_AUDIT',
+                                            'bg-rose-100 text-rose-700': doc.status === 'REJECTED',
+                                            'bg-emerald-100 text-emerald-700': doc.status === 'VERIFIED',
+                                            'bg-slate-100 text-slate-600': doc.status === 'VOIDED'
+                                        }" 
+                                        x-text="doc.status_label">
+                                    </span>
+                                </td>
+                                <td class="p-4 text-center space-x-1">
+                                    <button @click="openAuditModal(doc)" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded text-xs font-medium transition">ตรวจทาน</button>
+                                    <button @click="voidDocument(doc.doc_id)" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded text-xs font-medium transition">ยกเลิก (Void)</button>
+                                </td>
+                            </tr>
+                        </template>
+                        <template x-if="filteredDocuments.length === 0">
+                            <tr>
+                                <td colspan="6" class="p-8 text-center text-slate-400 text-sm">ไม่พบรายการเอกสารในระบบ</td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal: ตรวจสอบ / ตีกลับ / อนุมัติ (Audit & Verification Modal) -->
+    <div x-show="isAuditModalOpen" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" style="display: none;">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-lg font-bold text-slate-800">🔍 ตรวจสอบและพิจารณาเอกสาร</h3>
+                <button @click="isAuditModalOpen = false" class="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            <div class="space-y-2 text-sm">
+                <p><strong>เลขที่เอกสาร:</strong> <span x-text="selectedDoc.doc_id"></span></p>
+                <p><strong>Supplier:</strong> <span x-text="selectedDoc.supplier_name"></span></p>
+                <p><strong>ผู้บันทึก:</strong> <span x-text="selectedDoc.creator"></span></p>
+                
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-1">
+                    <p class="font-semibold text-xs text-slate-500 uppercase">ประวัติการทำงาน (Audit Trail):</p>
+                    <template x-for="trail in selectedDoc.audit_trail">
+                        <p class="text-xs text-slate-600"><span class="font-medium" x-text="'- ' + trail.timestamp + ' [' + trail.action + ']: '"></span> <span x-text="trail.note"></span></p>
+                    </template>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">ความเห็น / เหตุผลในการตีกลับหรืออนุมัติ:</label>
+                    <textarea x-model="auditNote" rows="3" placeholder="ระบุเหตุผล เช่น เอกสารถูกต้องครบถ้วน หรือ หลักฐานรูปถ่ายไม่ชัดเจน..." class="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-2 pt-3 border-t">
+                <button @click="processAudit('REJECTED')" class="bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">❌ ตีกลับเพื่อแก้ไข (Reject)</button>
+                <button @click="processAudit('VERIFIED')" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">✅ อนุมัติผ่าน (Verify Pass)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: สร้างเอกสารใหม่ (Create New Document) -->
+    <div x-show="isNewModalOpen" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" style="display: none;">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-lg font-bold text-slate-800">➕ บันทึกหลักฐานและเอกสารใหม่</h3>
+                <button @click="isNewModalOpen = false" class="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            <div class="space-y-3 text-sm">
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">ประเภทเอกสาร:</label>
+                    <select x-model="newDoc.type_code" class="w-full p-2 border border-slate-200 rounded-lg text-sm">
+                        <option value="RCV-001">RCV-001: ใบรับสินค้า (Receive Goods)</option>
+                        <option value="COUNT-001">COUNT-001: ใบบันทึกนับสต็อก (Stock Count)</option>
+                        <option value="CN-002">CN-002: ใบแจ้งเคลมสินค้า (Claim Note)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">ชื่อ Supplier / แหล่งที่มา:</label>
+                    <input type="text" x-model="newDoc.supplier_name" placeholder="เช่น บริษัท จรัญกิจ จำกัด" class="w-full p-2 border border-slate-200 rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">ชื่อพนักงานผู้บันทึก:</label>
+                    <input type="text" x-model="newDoc.creator" placeholder="เช่น สมชาย (พนักงานรับของ)" class="w-full p-2 border border-slate-200 rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">ชื่อสินค้าและจำนวน:</label>
+                    <input type="text" x-model="newDoc.product_name" placeholder="ชื่อสินค้า" class="w-full p-2 border border-slate-200 rounded-lg text-sm mb-1">
+                    <input type="number" x-model="newDoc.qty" placeholder="จำนวนที่รับ/นับ" class="w-full p-2 border border-slate-200 rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">แนบหลักฐานรูปภาพ / ไฟล์:</label>
+                    <input type="text" x-model="newDoc.file_name" placeholder="ชื่อไฟล์หลักฐาน เช่น slip_01.jpg" class="w-full p-2 border border-slate-200 rounded-lg text-sm">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-2 pt-3 border-t">
+                <button @click="isNewModalOpen = false" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-medium">ยกเลิก</button>
+                <button @click="saveNewDocument()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">บันทึกข้อมูล</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script ควบคุมระบบ (Alpine.js & Built-in Mock JSON State) -->
+    <script>
+        function workflowApp() {
+            return {
+                searchQuery: '',
+                currentFilter: 'ALL',
+                isAuditModalOpen: false,
+                isNewModalOpen: false,
+                selectedDoc: { audit_trail: [] },
+                auditNote: '',
+                newDoc: { type_code: 'RCV-001', supplier_name: '', creator: '', product_name: '', qty: 1, file_name: 'evidence.jpg' },
+                documents: [
+                    {
+                        doc_id: 'RCV-2026-1111-01',
+                        type_code: 'RCV-001',
+                        supplier_name: 'บริษัท จรัญกิจ จำกัด',
+                        date: '2026-11-11',
+                        time: '18:35',
+                        creator: 'สมชาย (พนักงานรับของ)',
+                        items: [{ product_name: 'อาหารเม็ดแมวเกรดพรีเมียม', ordered: 50, received: 50, unit: 'ถุง' }],
+                        status: 'PENDING_AUDIT',
+                        status_label: '🟡 รอตรวจสอบ',
+                        evidence_files: [{ name: 'invoice_001.pdf', type: 'pdf' }, { name: 'product.jpg', type: 'image' }],
+                        audit_trail: [{ action: 'CREATE', by: 'สมชาย', timestamp: '2026-11-11 18:35', note: 'บันทึกรับสินค้าเข้าสต็อก' }]
+                    },
+                    {
+                        doc_id: 'CN-2026-1110-02',
+                        type_code: 'CN-002',
+                        supplier_name: 'เพ็ท แอนด์ ฟู้ด ชอป',
+                        date: '2026-11-10',
+                        time: '14:20',
+                        creator: 'วิไล (พนักงานหน้าร้าน)',
+                        items: [{ product_name: 'อาหารนกแก้ววัยป้อน', ordered: 10, received: 8, damaged: 2, unit: 'กระปุก' }],
+                        status: 'REJECTED',
+                        status_label: '🔴 ตีกลับเพื่อแก้ไข',
+                        evidence_files: [{ name: 'damaged_box.jpg', type: 'image' }],
+                        audit_trail: [
+                            { action: 'CREATE', by: 'วิไล', timestamp: '2026-11-10 14:20', note: 'แจ้งเคลมสินค้าชำรุด' },
+                            { action: 'REJECT', by: 'ฝ่ายบัญชี/Audit', timestamp: '2026-11-10 16:00', note: 'หลักฐานรูปถ่ายไม่ชัดเจน กรุณาถ่ายใหม่' }
+                        ]
+                    }
+                ],
+                get filteredDocuments() {
+                    return this.documents.filter(doc => {
+                        const matchesSearch = doc.doc_id.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
+                                              doc.supplier_name.toLowerCase().includes(this.searchQuery.toLowerCase());
+                        const matchesFilter = this.currentFilter === 'ALL' || doc.status === this.currentFilter;
+                        return matchesSearch && matchesFilter;
+                    });
+                },
+                openAuditModal(doc) {
+                    this.selectedDoc = doc;
+                    this.auditNote = '';
+                    this.isAuditModalOpen = true;
+                },
+                processAudit(status) {
+                    this.selectedDoc.status = status;
+                    this.selectedDoc.status_label = status === 'VERIFIED' ? '🟢 ผ่านการตรวจสอบ' : '🔴 ตีกลับเพื่อแก้ไข';
+                    this.selectedDoc.audit_trail.push({
+                        action: status,
+                        by: 'ฝ่ายบัญชี/Audit (Unified)',
+                        timestamp: new Date().toISOString().slice(0, 16).replace('T', ' '),
+                        note: this.auditNote || 'ดำเนินการตรวจสอบเรียบร้อย'
+                    });
+                    this.isAuditModalOpen = false;
+                },
+                voidDocument(docId) {
+                    if(confirm('คุณต้องการยกเลิก (Void) เอกสารหมายเลข ' + docId + ' ใช่หรือไม่? (ตามหลักบัญชีจะไม่สามารถลบข้อมูลทิ้งได้)')) {
+                        const doc = this.documents.find(d => d.doc_id === docId);
+                        if(doc) {
+                            doc.status = 'VOIDED';
+                            doc.status_label = '⚫ ยกเลิกเอกสาร (Void)';
+                            doc.audit_trail.push({
+                                action: 'VOID',
+                                by: 'ผู้ใช้งานระบบ',
+                                timestamp: new Date().toISOString().slice(0, 16).replace('T', ' '),
+                                note: 'ยกเลิกเอกสารโดยผู้ใช้งาน'
+                            });
+                        }
+                    }
+                },
+                openNewModal() {
+                    this.newDoc = { type_code: 'RCV-001', supplier_name: '', creator: '', product_name: '', qty: 1, file_name: 'evidence.jpg' };
+                    this.isNewModalOpen = true;
+                },
+                saveNewDocument() {
+                    if(!this.newDoc.supplier_name || !this.newDoc.creator) {
+                        alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+                        return;
+                    }
+                    const newId = 'DOC-' + Math.floor(1000 + Math.random() * 9000);
+                    this.documents.unshift({
+                        doc_id: newId,
+                        type_code: this.newDoc.type_code,
+                        supplier_name: this.newDoc.supplier_name,
+                        date: new Date().toISOString().slice(0, 10),
+                        time: new Date().toTimeString().slice(0, 5),
+                        creator: this.newDoc.creator,
+                        items: [{ product_name: this.newDoc.product_name || 'สินค้าทั่วไป', received: this.newDoc.qty, unit: 'ชิ้น' }],
+                        status: 'PENDING_AUDIT',
+                        status_label: '🟡 รอตรวจสอบ',
+                        evidence_files: [{ name: this.newDoc.file_name, type: 'image' }],
+                        audit_trail: [{ action: 'CREATE', by: this.newDoc.creator, timestamp: new Date().toISOString().slice(0, 16).replace('T', ' '), note: 'สร้างเอกสารใหม่ในระบบ' }]
+                    });
+                    this.isNewModalOpen = false;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
