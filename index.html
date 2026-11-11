@@ -2,337 +2,650 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบบันทึกหลักฐานและเอกสาร (Unified Workflow System)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ระบบบันทึกเอกสาร (Document Recording System)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Alpine.js สำหรับทำ Interactive Dashboard -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'sans-serif'],
+                    },
+                    colors: {
+                        redTheme: {
+                            50: '#fef2f2',
+                            100: '#fee2e2',
+                            500: '#ef4444',
+                            600: '#dc2626',
+                            700: '#b91c1c',
+                            800: '#991b1b',
+                            900: '#7f1d1d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        body { font-family: 'Sarabun', sans-serif; }
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #f8fafc;
+            color: #1f2937;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #dc2626;
+            border-radius: 2px;
+        }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800" x-data="workflowApp()">
+<body class="min-h-screen flex flex-col justify-between bg-gray-50">
 
-    <!-- Header Navigation -->
-    <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center space-x-3">
-                <span class="text-2xl">📦</span>
+    <!-- Header Navigation (Mobile-First Optimized) -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs">
+        <div class="max-w-xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center text-white shadow-sm shadow-red-200">
+                    <i class="fa-solid fa-file-shield text-lg"></i>
+                </div>
                 <div>
-                    <h1 class="text-lg font-bold">ระบบบันทึกหลักฐานและตรวจสอบเอกสาร</h1>
-                    <p class="text-xs text-indigo-200">Unified Role Mode (ไม่ต้องเข้าสู่ระบบซ้ำซ้อน - พร้อมใช้งานบน GitHub Pages)</p>
+                    <h1 class="text-base font-bold text-gray-900 tracking-tight leading-tight">DocScan & Drive</h1>
+                    <p class="text-[10px] text-gray-500 font-medium">ระบบบันทึกเอกสารออนไลน์</p>
                 </div>
             </div>
-            <div>
-                <button @click="openNewModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow transition flex items-center space-x-1">
-                    <span>➕ สร้างเอกสารใหม่</span>
+            <div class="flex items-center space-x-2">
+                <div id="liveClock" class="hidden sm:flex items-center bg-red-50 text-red-700 px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-red-100">
+                    <i class="fa-regular fa-clock mr-1.5 text-red-500"></i>
+                    <span id="clockText">--/--/---- --:--:--</span>
+                </div>
+                <button onclick="openHistoryModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 active:scale-95">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>ประวัติ</span>
+                    <span id="badgeCount" class="bg-red-600 text-white text-[10px] px-1.5 py-0.2 rounded-full">0</span>
                 </button>
             </div>
         </div>
     </header>
 
-    <!-- Main Container -->
-    <main class="max-w-7xl mx-auto px-4 py-6">
+    <!-- Main Container (Mobile First Container Width max-w-xl) -->
+    <main class="max-w-xl mx-auto px-4 py-5 flex-grow w-full">
         
-        <!-- Dashboard Statistics Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+        <!-- Document Submission Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200/80 overflow-hidden">
+            <!-- Top Banner -->
+            <div class="bg-gradient-to-r from-red-700 to-red-600 px-5 py-4 text-white flex justify-between items-center">
                 <div>
-                    <p class="text-xs text-slate-500 font-medium">เอกสารทั้งหมด</p>
-                    <h3 class="text-2xl font-bold text-slate-700" x-text="documents.length">0</h3>
+                    <h2 class="text-sm font-bold sm:text-base">บันทึกเอกสารหลักฐานใหม่</h2>
+                    <p class="text-red-100 text-[11px] mt-0.5">เลือกประเภทเอกสาร ถ่ายภาพ และส่งเข้า Google Drive</p>
                 </div>
-                <div class="p-3 bg-indigo-50 text-indigo-600 rounded-lg text-xl">📄</div>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
-                <div>
-                    <p class="text-xs text-slate-500 font-medium">รอตรวจสอบ (Pending)</p>
-                    <h3 class="text-2xl font-bold text-amber-600" x-text="documents.filter(d => d.status === 'PENDING_AUDIT').length">0</h3>
+                <div class="bg-white/10 p-2 rounded-xl backdrop-blur-sm">
+                    <i class="fa-solid fa-cloud-arrow-up text-xl text-white"></i>
                 </div>
-                <div class="p-3 bg-amber-50 text-amber-600 rounded-lg text-xl">⏳</div>
             </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
-                <div>
-                    <p class="text-xs text-slate-500 font-medium">ตีกลับเพื่อแก้ไข (Rejected)</p>
-                    <h3 class="text-2xl font-bold text-rose-600" x-text="documents.filter(d => d.status === 'REJECTED').length">0</h3>
-                </div>
-                <div class="p-3 bg-rose-50 text-rose-600 rounded-lg text-xl">⚠️</div>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
-                <div>
-                    <p class="text-xs text-slate-500 font-medium">ผ่านการตรวจสอบ (Verified)</p>
-                    <h3 class="text-2xl font-bold text-emerald-600" x-text="documents.filter(d => d.status === 'VERIFIED').length">0</h3>
-                </div>
-                <div class="p-3 bg-emerald-50 text-emerald-600 rounded-lg text-xl">✅</div>
-            </div>
-        </div>
 
-        <!-- Filter & Search Toolbar -->
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="w-full md:w-1/3">
-                <input type="text" x-model="searchQuery" placeholder="🔍 ค้นหาเลขที่เอกสาร, ชื่อ Supplier..." class="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </div>
-            <div class="flex flex-wrap gap-2 w-full md:w-auto">
-                <button @click="currentFilter = 'ALL'" :class="currentFilter === 'ALL' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'" class="px-3 py-1.5 rounded-lg text-xs font-medium transition">ทั้งหมด</button>
-                <button @click="currentFilter = 'PENDING_AUDIT'" :class="currentFilter === 'PENDING_AUDIT' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600'" class="px-3 py-1.5 rounded-lg text-xs font-medium transition">รอตรวจ</button>
-                <button @click="currentFilter = 'REJECTED'" :class="currentFilter === 'REJECTED' ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-600'" class="px-3 py-1.5 rounded-lg text-xs font-medium transition">ตีกลับแก้ไข</button>
-                <button @click="currentFilter = 'VERIFIED'" :class="currentFilter === 'VERIFIED' ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-600'" class="px-3 py-1.5 rounded-lg text-xs font-medium transition">เสร็จสิ้น</button>
-            </div>
-        </div>
+            <form id="docForm" onsubmit="handleSubmit(event)" class="p-5 sm:p-6 space-y-4">
+                
+                <!-- Document Title -->
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-gray-700" for="docTitle">
+                        <i class="fa-solid fa-heading text-red-600 mr-1"></i> ชื่อเอกสาร / หัวข้อ <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="docTitle" required placeholder="เช่น ใบเสร็จซื้ออุปกรณ์สำนักงาน" 
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-xs sm:text-sm transition bg-gray-50/50">
+                </div>
 
-        <!-- Documents Table List -->
-        <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-100">
-                            <th class="p-4">เลขที่เอกสาร / ประเภท</th>
-                            <th class="p-4">Supplier / ผู้บันทึก</th>
-                            <th class="p-4">รายละเอียดสินค้า</th>
-                            <th class="p-4">หลักฐาน (Files/Images)</th>
-                            <th class="p-4">สถานะ</th>
-                            <th class="p-4 text-center">จัดการ / ตรวจสอบ</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 text-sm">
-                        <template x-for="doc in filteredDocuments" :key="doc.doc_id">
-                            <tr class="hover:bg-slate-50 transition">
-                                <td class="p-4">
-                                    <span class="font-bold text-indigo-600" x-text="doc.doc_id"></span>
-                                    <p class="text-xs text-slate-400" x-text="doc.date + ' ' + doc.time"></p>
-                                </td>
-                                <td class="p-4">
-                                    <span class="font-medium text-slate-700" x-text="doc.supplier_name"></span>
-                                    <p class="text-xs text-slate-400" x-text="'ผู้บันทึก: ' + doc.creator"></p>
-                                </td>
-                                <td class="p-4">
-                                    <template x-for="item in doc.items">
-                                        <div class="text-xs">
-                                            <span class="font-medium" x-text="item.product_name"></span>: 
-                                            <span x-text="item.received + ' ' + item.unit"></span>
-                                            <span class="text-rose-500 font-bold" x-show="item.damaged"> (เสียหาย: <span x-text="item.damaged"></span>)</span>
-                                        </div>
-                                    </template>
-                                </td>
-                                <td class="p-4">
-                                    <div class="flex gap-1">
-                                        <template x-for="file in doc.evidence_files">
-                                            <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded border border-slate-200 flex items-center space-x-1">
-                                                <span>📎</span> <span x-text="file.name"></span>
-                                            </span>
-                                        </template>
-                                    </div>
-                                </td>
-                                <td class="p-4">
-                                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold"
-                                        :class="{
-                                            'bg-amber-100 text-amber-700': doc.status === 'PENDING_AUDIT',
-                                            'bg-rose-100 text-rose-700': doc.status === 'REJECTED',
-                                            'bg-emerald-100 text-emerald-700': doc.status === 'VERIFIED',
-                                            'bg-slate-100 text-slate-600': doc.status === 'VOIDED'
-                                        }" 
-                                        x-text="doc.status_label">
-                                    </span>
-                                </td>
-                                <td class="p-4 text-center space-x-1">
-                                    <button @click="openAuditModal(doc)" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded text-xs font-medium transition">ตรวจทาน</button>
-                                    <button @click="voidDocument(doc.doc_id)" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded text-xs font-medium transition">ยกเลิก (Void)</button>
-                                </td>
-                            </tr>
-                        </template>
-                        <template x-if="filteredDocuments.length === 0">
-                            <tr>
-                                <td colspan="6" class="p-8 text-center text-slate-400 text-sm">ไม่พบรายการเอกสารในระบบ</td>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
+                <!-- Document Type Dropdown (Exact required options) -->
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-gray-700" for="docType">
+                        <i class="fa-solid fa-tags text-red-600 mr-1"></i> เลือกประเภทหลักฐาน <span class="text-red-500">*</span>
+                    </label>
+                    <select id="docType" required onchange="handleDocTypeChange(event)"
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-xs sm:text-sm transition bg-gray-50/50">
+                        <option value="" disabled selected>-- กรุณาเลือกประเภทหลักฐาน --</option>
+                        <option value="ใบเสนอราคา">ใบเสนอราคา</option>
+                        <option value="ใบคำสั่งซื้อ">ใบคำสั่งซื้อ</option>
+                        <option value="ใบกำกับภาษีซื้อ">ใบกำกับภาษีซื้อ</option>
+                        <option value="ใบรับสินค้า">ใบรับสินค้า</option>
+                        <option value="ใบขนส่ง">ใบขนส่ง</option>
+                        <option value="ใบเสร็จรับเงิน">ใบเสร็จรับเงิน</option>
+                        <option value="ใบส่งสินค้า/ใบส่งของ">ใบส่งสินค้า/ใบส่งของ</option>
+                        <option value="ใบส่งคืนสินค้า">ใบส่งคืนสินค้า</option>
+                        <option value="ใบเคลมสินค้า">ใบเคลมสินค้า</option>
+                        <option value="อื่นๆ">อื่นๆ</option>
+                    </select>
+                </div>
+
+                <!-- Custom Document Type Input (Hidden by default) -->
+                <div id="customTypeContainer" class="space-y-1.5 hidden animate-fadeIn">
+                    <label class="block text-xs font-bold text-red-700" for="customDocType">
+                        <i class="fa-solid fa-pen-to-square text-red-600 mr-1"></i> ระบุชื่อประเภทเอกสาร <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="customDocType" placeholder="กรอกชื่อประเภทเอกสารอื่นๆ" 
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-red-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-xs sm:text-sm transition bg-red-50/30">
+                </div>
+
+                <!-- Description / Note -->
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-gray-700" for="docNote">
+                        <i class="fa-solid fa-note-sticky text-red-600 mr-1"></i> หมายเหตุเพิ่มเติม (ถ้ามี)
+                    </label>
+                    <textarea id="docNote" rows="2" placeholder="ระบุรายละเอียดเพิ่มเติม หรือเลขที่เอกสาร" 
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-xs sm:text-sm transition bg-gray-50/50"></textarea>
+                </div>
+
+                <!-- Capture / Upload Section -->
+                <div class="space-y-2 pt-1">
+                    <label class="block text-xs font-bold text-gray-700">
+                        <i class="fa-solid fa-camera-retro text-red-600 mr-1"></i> แนบหลักฐานเอกสาร (ถ่ายภาพหรืออัปโหลด) <span class="text-red-500">*</span>
+                    </label>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- Open Camera Button -->
+                        <button type="button" onclick="openCameraModal()" 
+                            class="flex flex-col sm:flex-row items-center justify-center p-3.5 border-2 border-dashed border-red-300 bg-red-50/50 hover:bg-red-100/60 text-red-700 rounded-2xl font-medium transition group shadow-2xs text-center sm:text-left space-y-1.5 sm:space-y-0 sm:space-x-3 active:scale-95">
+                            <div class="w-8 h-8 rounded-full bg-red-600 text-white flex items-center justify-center group-hover:scale-110 transition shrink-0">
+                                <i class="fa-solid fa-camera text-sm"></i>
+                            </div>
+                            <div>
+                                <div class="text-xs font-bold">เปิดกล้องถ่ายภาพ</div>
+                                <div class="text-[10px] text-red-500 hidden sm:block">ใช้กล้องมือถือ/เว็บแคม</div>
+                            </div>
+                        </button>
+
+                        <!-- Upload File Button -->
+                        <label class="flex flex-col sm:flex-row items-center justify-center p-3.5 border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-2xl font-medium transition cursor-pointer group shadow-2xs text-center sm:text-left space-y-1.5 sm:space-y-0 sm:space-x-3 active:scale-95">
+                            <div class="w-8 h-8 rounded-full bg-gray-700 text-white flex items-center justify-center group-hover:scale-110 transition shrink-0">
+                                <i class="fa-solid fa-upload text-sm"></i>
+                            </div>
+                            <div>
+                                <div class="text-xs font-bold">อัปโหลดไฟล์</div>
+                                <div class="text-[10px] text-gray-500 hidden sm:block">JPG, PNG หรือ PDF</div>
+                            </div>
+                            <input type="file" id="fileInput" accept="image/*,.pdf" class="hidden" onchange="handleFileSelect(event)">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Preview Area -->
+                <div id="previewContainer" class="hidden space-y-2 p-3.5 bg-gray-50 rounded-2xl border border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[11px] font-bold text-gray-600 uppercase tracking-wider flex items-center">
+                            <i class="fa-solid fa-eye text-red-600 mr-1.5"></i> ตัวอย่างหลักฐานที่แนบ
+                        </span>
+                        <button type="button" onclick="clearFile()" class="text-[11px] text-red-600 hover:text-red-800 font-semibold flex items-center bg-white px-2 py-0.5 rounded-lg border border-red-200 shadow-2xs transition">
+                            <i class="fa-solid fa-trash-can mr-1"></i> เปลี่ยนไฟล์
+                        </button>
+                    </div>
+                    <div class="relative rounded-xl overflow-hidden bg-black/5 flex items-center justify-center max-h-56 border border-gray-200">
+                        <img id="imagePreview" src="" alt="Preview" class="max-h-52 object-contain rounded-lg">
+                        <div id="pdfPreviewBadge" class="hidden flex-col items-center justify-center py-6 text-gray-600">
+                            <i class="fa-solid fa-file-pdf text-4xl text-red-600 mb-1.5"></i>
+                            <span id="fileNameDisplay" class="text-xs font-semibold px-2 text-center truncate max-w-xs">document.pdf</span>
+                            <span class="text-[10px] text-gray-400 mt-0.5">พร้อมบันทึกลง Google Drive</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timestamp Auto-record info display -->
+                <div class="bg-red-50/70 border border-red-100 rounded-2xl p-3 flex items-center justify-between text-xs text-red-800">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-7 h-7 rounded-full bg-red-100 flex items-center justify-center text-red-600 shrink-0">
+                            <i class="fa-solid fa-shield-halved text-xs"></i>
+                        </div>
+                        <div>
+                            <span class="font-bold block text-[11px]">Timestamp บันทึกเวลาอัตโนมัติ</span>
+                            <span class="text-[10px] text-gray-500">บันทึกวันที่และเวลาปัจจุบันเมื่อกดส่งหลักฐาน</span>
+                        </div>
+                    </div>
+                    <div class="text-right font-mono font-bold text-red-600 text-[11px]" id="liveTimestampBadge">
+                        --/--/---- 00:00:00
+                    </div>
+                </div>
+
+                <!-- Submit Button (Highlighted Red & White Theme) -->
+                <div class="pt-1">
+                    <button type="submit" id="submitBtn"
+                        class="w-full py-3.5 bg-red-600 hover:bg-red-700 active:scale-98 text-white rounded-2xl font-bold shadow-md shadow-red-600/30 transition flex items-center justify-center space-x-2 text-sm sm:text-base">
+                        <i class="fa-solid fa-cloud-arrow-up text-base"></i>
+                        <span>ส่งหลักฐาน (บันทึกลง Google Drive)</span>
+                    </button>
+                </div>
+
+            </form>
         </div>
 
     </main>
 
-    <!-- Modal: ตรวจสอบ / ตีกลับ / อนุมัติ (Audit & Verification Modal) -->
-    <div x-show="isAuditModalOpen" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" style="display: none;">
-        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4">
-            <div class="flex justify-between items-center border-b pb-3">
-                <h3 class="text-lg font-bold text-slate-800">🔍 ตรวจสอบและพิจารณาเอกสาร</h3>
-                <button @click="isAuditModalOpen = false" class="text-slate-400 hover:text-slate-600">✕</button>
-            </div>
-            <div class="space-y-2 text-sm">
-                <p><strong>เลขที่เอกสาร:</strong> <span x-text="selectedDoc.doc_id"></span></p>
-                <p><strong>Supplier:</strong> <span x-text="selectedDoc.supplier_name"></span></p>
-                <p><strong>ผู้บันทึก:</strong> <span x-text="selectedDoc.creator"></span></p>
-                
-                <div class="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-1">
-                    <p class="font-semibold text-xs text-slate-500 uppercase">ประวัติการทำงาน (Audit Trail):</p>
-                    <template x-for="trail in selectedDoc.audit_trail">
-                        <p class="text-xs text-slate-600"><span class="font-medium" x-text="'- ' + trail.timestamp + ' [' + trail.action + ']: '"></span> <span x-text="trail.note"></span></p>
-                    </template>
-                </div>
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 py-4 text-center text-[11px] text-gray-500">
+        <p>ระบบบันทึกเอกสารและหลักฐานออนไลน์ &copy; 2026 | Mobile-First UI</p>
+    </footer>
 
-                <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1">ความเห็น / เหตุผลในการตีกลับหรืออนุมัติ:</label>
-                    <textarea x-model="auditNote" rows="3" placeholder="ระบุเหตุผล เช่น เอกสารถูกต้องครบถ้วน หรือ หลักฐานรูปถ่ายไม่ชัดเจน..." class="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-                </div>
+    <!-- Camera Modal (Mobile Optimized) -->
+    <div id="cameraModal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-3">
+        <div class="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl flex flex-col">
+            <!-- Modal Header -->
+            <div class="bg-red-600 text-white px-4 py-3 flex justify-between items-center">
+                <h3 class="font-bold text-sm flex items-center">
+                    <i class="fa-solid fa-camera mr-2"></i> ถ่ายภาพเอกสารผ่านกล้อง
+                </h3>
+                <button onclick="closeCameraModal()" class="text-white hover:text-red-200 text-lg font-bold p-1">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
-            <div class="flex justify-end space-x-2 pt-3 border-t">
-                <button @click="processAudit('REJECTED')" class="bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">❌ ตีกลับเพื่อแก้ไข (Reject)</button>
-                <button @click="processAudit('VERIFIED')" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">✅ อนุมัติผ่าน (Verify Pass)</button>
+            <!-- Video Feed -->
+            <div class="p-3 bg-black relative flex items-center justify-center aspect-[3/4] sm:aspect-[4/3]">
+                <video id="cameraVideo" autoplay playsinline class="w-full h-full object-cover rounded-xl"></video>
+                <canvas id="cameraCanvas" class="hidden"></canvas>
+            </div>
+            <!-- Modal Footer Controls -->
+            <div class="p-3.5 bg-gray-50 flex justify-center space-x-3">
+                <button type="button" onclick="closeCameraModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl font-medium text-xs transition">
+                    ยกเลิก
+                </button>
+                <button type="button" onclick="capturePhoto()" class="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs shadow-md shadow-red-600/20 transition flex items-center space-x-1.5">
+                    <i class="fa-solid fa-circle text-[10px] text-white animate-pulse"></i>
+                    <span>กดถ่ายภาพ</span>
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Modal: สร้างเอกสารใหม่ (Create New Document) -->
-    <div x-show="isNewModalOpen" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" style="display: none;">
-        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4">
-            <div class="flex justify-between items-center border-b pb-3">
-                <h3 class="text-lg font-bold text-slate-800">➕ บันทึกหลักฐานและเอกสารใหม่</h3>
-                <button @click="isNewModalOpen = false" class="text-slate-400 hover:text-slate-600">✕</button>
-            </div>
-            <div class="space-y-3 text-sm">
-                <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1">ประเภทเอกสาร:</label>
-                    <select x-model="newDoc.type_code" class="w-full p-2 border border-slate-200 rounded-lg text-sm">
-                        <option value="RCV-001">RCV-001: ใบรับสินค้า (Receive Goods)</option>
-                        <option value="COUNT-001">COUNT-001: ใบบันทึกนับสต็อก (Stock Count)</option>
-                        <option value="CN-002">CN-002: ใบแจ้งเคลมสินค้า (Claim Note)</option>
-                    </select>
+    <!-- Processing / Success Modal -->
+    <div id="loadingModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-center space-y-5 shadow-2xl">
+            <!-- Loading State -->
+            <div id="loadingStateContent" class="space-y-3.5">
+                <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto text-red-600 animate-spin">
+                    <i class="fa-solid fa-spinner text-2xl"></i>
                 </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1">ชื่อ Supplier / แหล่งที่มา:</label>
-                    <input type="text" x-model="newDoc.supplier_name" placeholder="เช่น บริษัท จรัญกิจ จำกัด" class="w-full p-2 border border-slate-200 rounded-lg text-sm">
+                <div class="space-y-1">
+                    <h3 class="font-bold text-base text-gray-900">กำลังอัปโหลดเอกสาร...</h3>
+                    <p class="text-[11px] text-gray-500">ระบบกำลังเข้ารหัสและบันทึกลง Google Drive</p>
                 </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1">ชื่อพนักงานผู้บันทึก:</label>
-                    <input type="text" x-model="newDoc.creator" placeholder="เช่น สมชาย (พนักงานรับของ)" class="w-full p-2 border border-slate-200 rounded-lg text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1">ชื่อสินค้าและจำนวน:</label>
-                    <input type="text" x-model="newDoc.product_name" placeholder="ชื่อสินค้า" class="w-full p-2 border border-slate-200 rounded-lg text-sm mb-1">
-                    <input type="number" x-model="newDoc.qty" placeholder="จำนวนที่รับ/นับ" class="w-full p-2 border border-slate-200 rounded-lg text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1">แนบหลักฐานรูปภาพ / ไฟล์:</label>
-                    <input type="text" x-model="newDoc.file_name" placeholder="ชื่อไฟล์หลักฐาน เช่น slip_01.jpg" class="w-full p-2 border border-slate-200 rounded-lg text-sm">
+                <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                    <div id="progressBar" class="bg-red-600 h-full w-0 transition-all duration-500"></div>
                 </div>
             </div>
-            <div class="flex justify-end space-x-2 pt-3 border-t">
-                <button @click="isNewModalOpen = false" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-medium">ยกเลิก</button>
-                <button @click="saveNewDocument()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">บันทึกข้อมูล</button>
+
+            <!-- Success State -->
+            <div id="successStateContent" class="hidden space-y-4">
+                <div class="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto text-emerald-600 animate-bounce">
+                    <i class="fa-solid fa-circle-check text-3xl"></i>
+                </div>
+                <div class="space-y-1">
+                    <h3 class="font-bold text-lg text-gray-900">บันทึกสำเร็จเรียบร้อย!</h3>
+                    <p class="text-[11px] text-gray-500">อัปโหลดเข้า Google Drive และบันทึก Timestamp แล้ว</p>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-xl text-left text-[11px] space-y-1 border border-gray-200 font-mono text-gray-600">
+                    <div><b>Drive ID:</b> <span id="resDriveId">DRV-98421-2026</span></div>
+                    <div><b>Timestamp:</b> <span id="resTimestamp">--/--/---- --:--:--</span></div>
+                </div>
+                <button type="button" onclick="closeLoadingModal()" class="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs shadow-md shadow-red-600/20 transition">
+                    ตกลง / สร้างรายการใหม่
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Script ควบคุมระบบ (Alpine.js & Built-in Mock JSON State) -->
+    <!-- History / Recent Uploads Modal -->
+    <div id="historyModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white rounded-2xl max-w-xl w-full max-h-[85vh] overflow-hidden shadow-2xl flex flex-col">
+            <!-- Modal Header -->
+            <div class="bg-gray-900 text-white px-4 py-3.5 flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-clock-rotate-left text-red-500 text-sm"></i>
+                    <h3 class="font-bold text-sm">ประวัติการบันทึกเอกสารล่าสุด</h3>
+                </div>
+                <button onclick="closeHistoryModal()" class="text-gray-400 hover:text-white text-lg font-bold p-1">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <!-- Table / Card Container -->
+            <div class="p-4 overflow-y-auto custom-scrollbar flex-grow space-y-3">
+                <div id="emptyHistory" class="text-center py-10 text-gray-400 space-y-2">
+                    <i class="fa-solid fa-folder-open text-4xl text-gray-300"></i>
+                    <p class="text-xs font-medium">ยังไม่มีประวัติการบันทึกเอกสารในระบบ</p>
+                </div>
+                <div id="historyListContainer" class="space-y-2.5">
+                    <!-- Cards will be injected here for mobile friendliness -->
+                </div>
+            </div>
+            <!-- Modal Footer -->
+            <div class="p-3 bg-gray-50 border-t border-gray-200 flex justify-end">
+                <button onclick="closeHistoryModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-xl font-medium text-xs transition">
+                    ปิดหน้าต่าง
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Viewer Modal for Previewing Image -->
+    <div id="viewerModal" class="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm hidden flex items-center justify-center p-3">
+        <div class="relative max-w-lg w-full max-h-[90vh] flex flex-col items-center">
+            <button onclick="closeViewerModal()" class="absolute -top-10 right-0 text-white hover:text-red-400 text-2xl font-bold p-2">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <img id="viewerImage" src="" alt="Full View" class="max-h-[80vh] max-w-full object-contain rounded-xl border border-gray-800 shadow-2xl">
+            <div id="viewerCaption" class="text-white text-xs font-medium mt-3 bg-black/60 px-3 py-1.5 rounded-lg backdrop-blur-md text-center"></div>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
     <script>
-        function workflowApp() {
-            return {
-                searchQuery: '',
-                currentFilter: 'ALL',
-                isAuditModalOpen: false,
-                isNewModalOpen: false,
-                selectedDoc: { audit_trail: [] },
-                auditNote: '',
-                newDoc: { type_code: 'RCV-001', supplier_name: '', creator: '', product_name: '', qty: 1, file_name: 'evidence.jpg' },
-                documents: [
-                    {
-                        doc_id: 'RCV-2026-1111-01',
-                        type_code: 'RCV-001',
-                        supplier_name: 'บริษัท จรัญกิจ จำกัด',
-                        date: '2026-11-11',
-                        time: '18:35',
-                        creator: 'สมชาย (พนักงานรับของ)',
-                        items: [{ product_name: 'อาหารเม็ดแมวเกรดพรีเมียม', ordered: 50, received: 50, unit: 'ถุง' }],
-                        status: 'PENDING_AUDIT',
-                        status_label: '🟡 รอตรวจสอบ',
-                        evidence_files: [{ name: 'invoice_001.pdf', type: 'pdf' }, { name: 'product.jpg', type: 'image' }],
-                        audit_trail: [{ action: 'CREATE', by: 'สมชาย', timestamp: '2026-11-11 18:35', note: 'บันทึกรับสินค้าเข้าสต็อก' }]
-                    },
-                    {
-                        doc_id: 'CN-2026-1110-02',
-                        type_code: 'CN-002',
-                        supplier_name: 'เพ็ท แอนด์ ฟู้ด ชอป',
-                        date: '2026-11-10',
-                        time: '14:20',
-                        creator: 'วิไล (พนักงานหน้าร้าน)',
-                        items: [{ product_name: 'อาหารนกแก้ววัยป้อน', ordered: 10, received: 8, damaged: 2, unit: 'กระปุก' }],
-                        status: 'REJECTED',
-                        status_label: '🔴 ตีกลับเพื่อแก้ไข',
-                        evidence_files: [{ name: 'damaged_box.jpg', type: 'image' }],
-                        audit_trail: [
-                            { action: 'CREATE', by: 'วิไล', timestamp: '2026-11-10 14:20', note: 'แจ้งเคลมสินค้าชำรุด' },
-                            { action: 'REJECT', by: 'ฝ่ายบัญชี/Audit', timestamp: '2026-11-10 16:00', note: 'หลักฐานรูปถ่ายไม่ชัดเจน กรุณาถ่ายใหม่' }
-                        ]
-                    }
-                ],
-                get filteredDocuments() {
-                    return this.documents.filter(doc => {
-                        const matchesSearch = doc.doc_id.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
-                                              doc.supplier_name.toLowerCase().includes(this.searchQuery.toLowerCase());
-                        const matchesFilter = this.currentFilter === 'ALL' || doc.status === this.currentFilter;
-                        return matchesSearch && matchesFilter;
-                    });
-                },
-                openAuditModal(doc) {
-                    this.selectedDoc = doc;
-                    this.auditNote = '';
-                    this.isAuditModalOpen = true;
-                },
-                processAudit(status) {
-                    this.selectedDoc.status = status;
-                    this.selectedDoc.status_label = status === 'VERIFIED' ? '🟢 ผ่านการตรวจสอบ' : '🔴 ตีกลับเพื่อแก้ไข';
-                    this.selectedDoc.audit_trail.push({
-                        action: status,
-                        by: 'ฝ่ายบัญชี/Audit (Unified)',
-                        timestamp: new Date().toISOString().slice(0, 16).replace('T', ' '),
-                        note: this.auditNote || 'ดำเนินการตรวจสอบเรียบร้อย'
-                    });
-                    this.isAuditModalOpen = false;
-                },
-                voidDocument(docId) {
-                    if(confirm('คุณต้องการยกเลิก (Void) เอกสารหมายเลข ' + docId + ' ใช่หรือไม่? (ตามหลักบัญชีจะไม่สามารถลบข้อมูลทิ้งได้)')) {
-                        const doc = this.documents.find(d => d.doc_id === docId);
-                        if(doc) {
-                            doc.status = 'VOIDED';
-                            doc.status_label = '⚫ ยกเลิกเอกสาร (Void)';
-                            doc.audit_trail.push({
-                                action: 'VOID',
-                                by: 'ผู้ใช้งานระบบ',
-                                timestamp: new Date().toISOString().slice(0, 16).replace('T', ' '),
-                                note: 'ยกเลิกเอกสารโดยผู้ใช้งาน'
-                            });
-                        }
-                    }
-                },
-                openNewModal() {
-                    this.newDoc = { type_code: 'RCV-001', supplier_name: '', creator: '', product_name: '', qty: 1, file_name: 'evidence.jpg' };
-                    this.isNewModalOpen = true;
-                },
-                saveNewDocument() {
-                    if(!this.newDoc.supplier_name || !this.newDoc.creator) {
-                        alert('กรุณากรอกข้อมูลให้ครบถ้วน');
-                        return;
-                    }
-                    const newId = 'DOC-' + Math.floor(1000 + Math.random() * 9000);
-                    this.documents.unshift({
-                        doc_id: newId,
-                        type_code: this.newDoc.type_code,
-                        supplier_name: this.newDoc.supplier_name,
-                        date: new Date().toISOString().slice(0, 10),
-                        time: new Date().toTimeString().slice(0, 5),
-                        creator: this.newDoc.creator,
-                        items: [{ product_name: this.newDoc.product_name || 'สินค้าทั่วไป', received: this.newDoc.qty, unit: 'ชิ้น' }],
-                        status: 'PENDING_AUDIT',
-                        status_label: '🟡 รอตรวจสอบ',
-                        evidence_files: [{ name: this.newDoc.file_name, type: 'image' }],
-                        audit_trail: [{ action: 'CREATE', by: this.newDoc.creator, timestamp: new Date().toISOString().slice(0, 16).replace('T', ' '), note: 'สร้างเอกสารใหม่ในระบบ' }]
-                    });
-                    this.isNewModalOpen = false;
+        // Global Variables
+        let currentFileData = null;
+        let currentFileType = null;
+        let currentFileName = '';
+        let mediaStream = null;
+        let documentHistory = JSON.parse(localStorage.getItem('doc_history_v2') || '[]');
+
+        // Initialize App
+        window.onload = function() {
+            updateClock();
+            setInterval(updateClock, 1000);
+            renderHistoryList();
+        };
+
+        // Realtime Clock & Timestamp
+        function updateClock() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' });
+            const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            document.getElementById('clockText').innerText = `${dateStr} ${timeStr}`;
+            document.getElementById('liveTimestampBadge').innerText = `${dateStr} ${timeStr}`;
+        }
+
+        // Handle Document Type Selection (Show/Hide Custom Input)
+        function handleDocTypeChange(event) {
+            const val = event.target.value;
+            const customContainer = document.getElementById('customTypeContainer');
+            const customInput = document.getElementById('customDocType');
+
+            if (val === 'อื่นๆ') {
+                customContainer.classList.remove('hidden');
+                customInput.setAttribute('required', 'true');
+            } else {
+                customContainer.classList.add('hidden');
+                customInput.removeAttribute('required');
+                customInput.value = '';
+            }
+        }
+
+        // File Selection Handler
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            currentFileName = file.name;
+            if (file.type.includes('image')) {
+                currentFileType = 'image';
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentFileData = e.target.result;
+                    showPreview(currentFileData, 'image');
+                };
+                reader.readAsDataURL(file);
+            } else if (file.type === 'application/pdf') {
+                currentFileType = 'pdf';
+                currentFileData = 'PDF_DOCUMENT';
+                showPreview(null, 'pdf', file.name);
+            } else {
+                alert('กรุณาเลือกไฟล์รูปภาพ (JPG, PNG) หรือไฟล์ PDF เท่านั้น');
+            }
+        }
+
+        // Camera Modal Control
+        async function openCameraModal() {
+            const modal = document.getElementById('cameraModal');
+            modal.classList.remove('hidden');
+            const video = document.getElementById('cameraVideo');
+
+            try {
+                mediaStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' }, 
+                    audio: false 
+                });
+                video.srcObject = mediaStream;
+            } catch (err) {
+                console.error("Camera error:", err);
+                alert('ไม่สามารถเปิดกล้องได้ กรุณาตรวจสอบการอนุญาตใช้งานกล้องในเบราว์เซอร์');
+                closeCameraModal();
+            }
+        }
+
+        function closeCameraModal() {
+            const modal = document.getElementById('cameraModal');
+            modal.classList.add('hidden');
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('cameraVideo');
+            const canvas = document.getElementById('cameraCanvas');
+            
+            canvas.width = video.videoWidth || 1280;
+            canvas.height = video.videoHeight || 960;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            currentFileData = canvas.toDataURL('image/jpeg', 0.85);
+            currentFileType = 'image';
+            currentFileName = `photo_capture_${Date.now()}.jpg`;
+
+            showPreview(currentFileData, 'image');
+            closeCameraModal();
+        }
+
+        // Show Preview UI
+        function showPreview(dataUrl, type, name = '') {
+            const container = document.getElementById('previewContainer');
+            const imgEl = document.getElementById('imagePreview');
+            const pdfBadge = document.getElementById('pdfPreviewBadge');
+            const fileNameDisplay = document.getElementById('fileNameDisplay');
+
+            container.classList.remove('hidden');
+
+            if (type === 'image') {
+                imgEl.src = dataUrl;
+                imgEl.classList.remove('hidden');
+                pdfBadge.classList.add('hidden');
+                pdfBadge.classList.remove('flex');
+            } else {
+                imgEl.classList.add('hidden');
+                pdfBadge.classList.remove('hidden');
+                pdfBadge.classList.add('flex');
+                fileNameDisplay.innerText = name;
+            }
+        }
+
+        function clearFile() {
+            currentFileData = null;
+            currentFileType = null;
+            currentFileName = '';
+            document.getElementById('previewContainer').classList.add('hidden');
+            document.getElementById('fileInput').value = '';
+        }
+
+        // Submit Form & Google Drive Simulation
+        function handleSubmit(event) {
+            event.preventDefault();
+
+            if (!currentFileData) {
+                alert('กรุณาแนบไฟล์หลักฐานเอกสาร (ถ่ายภาพหรืออัปโหลดไฟล์) ก่อนส่ง');
+                return;
+            }
+
+            const title = document.getElementById('docTitle').value;
+            let type = document.getElementById('docType').value;
+            if (type === 'อื่นๆ') {
+                const customVal = document.getElementById('customDocType').value.trim();
+                if (customVal) {
+                    type = `อื่นๆ: ${customVal}`;
                 }
             }
+            const note = document.getElementById('docNote').value;
+            
+            const now = new Date();
+            const timestamp = now.toLocaleDateString('th-TH', { 
+                year: 'numeric', month: '2-digit', day: '2-digit', 
+                hour: '2-digit', minute: '2-digit', second: '2-digit' 
+            });
+
+            // Show Loading Modal
+            const loadingModal = document.getElementById('loadingModal');
+            const loadingState = document.getElementById('loadingStateContent');
+            const successState = document.getElementById('successStateContent');
+            const progressBar = document.getElementById('progressBar');
+
+            loadingModal.classList.remove('hidden');
+            loadingState.classList.remove('hidden');
+            successState.classList.add('hidden');
+            progressBar.style.width = '0%';
+
+            // Simulate progress
+            setTimeout(() => { progressBar.style.width = '50%'; }, 400);
+            setTimeout(() => { progressBar.style.width = '90%'; }, 900);
+
+            setTimeout(() => {
+                progressBar.style.width = '100%';
+                
+                // Save to History
+                const newRecord = {
+                    id: 'DRV-' + Math.floor(10000 + Math.random() * 90000),
+                    title: title,
+                    type: type,
+                    note: note || '-',
+                    timestamp: timestamp,
+                    fileType: currentFileType,
+                    fileData: currentFileData,
+                    fileName: currentFileName || 'document_file'
+                };
+
+                documentHistory.unshift(newRecord);
+                localStorage.setItem('doc_history_v2', JSON.stringify(documentHistory));
+                renderHistoryList();
+
+                // Switch to success state
+                setTimeout(() => {
+                    loadingState.classList.add('hidden');
+                    successState.classList.remove('hidden');
+                    document.getElementById('resDriveId').innerText = newRecord.id;
+                    document.getElementById('resTimestamp').innerText = timestamp;
+                }, 300);
+
+            }, 1400);
+        }
+
+        function closeLoadingModal() {
+            document.getElementById('loadingModal').classList.add('hidden');
+            // Reset form
+            document.getElementById('docForm').reset();
+            document.getElementById('customTypeContainer').classList.add('hidden');
+            clearFile();
+        }
+
+        // History Modal Management (Mobile Card List layout)
+        function openHistoryModal() {
+            renderHistoryList();
+            document.getElementById('historyModal').classList.remove('hidden');
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('historyModal').classList.add('hidden');
+        }
+
+        function renderHistoryList() {
+            const badgeCount = document.getElementById('badgeCount');
+            const emptyHistory = document.getElementById('emptyHistory');
+            const listContainer = document.getElementById('historyListContainer');
+
+            badgeCount.innerText = documentHistory.length;
+
+            if (documentHistory.length === 0) {
+                emptyHistory.classList.remove('hidden');
+                listContainer.innerHTML = '';
+                return;
+            }
+
+            emptyHistory.classList.add('hidden');
+            listContainer.innerHTML = '';
+
+            documentHistory.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'bg-gray-50 border border-gray-200 rounded-xl p-3 flex items-start space-x-3 transition hover:bg-gray-100/70';
+
+                let thumbHtml = '';
+                if (item.fileType === 'image') {
+                    thumbHtml = `<img src="${item.fileData}" class="w-14 h-14 object-cover rounded-lg cursor-pointer border border-gray-200 shadow-2xs shrink-0" onclick="openViewer('${item.fileData}', '${escapeHtml(item.title)}')">`;
+                } else {
+                    thumbHtml = `<div class="w-14 h-14 bg-red-50 text-red-600 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 border border-red-100"><i class="fa-solid fa-file-pdf text-2xl"></i></div>`;
+                }
+
+                card.innerHTML = `
+                    ${thumbHtml}
+                    <div class="flex-grow min-w-0">
+                        <div class="flex justify-between items-start">
+                            <h4 class="font-bold text-xs text-gray-900 truncate pr-2">${escapeHtml(item.title)}</h4>
+                            <span class="text-[10px] font-mono text-gray-400 shrink-0">${item.id}</span>
+                        </div>
+                        <div class="mt-0.5">
+                            <span class="inline-block bg-red-50 text-red-700 text-[10px] px-2 py-0.5 rounded font-semibold">${escapeHtml(item.type)}</span>
+                        </div>
+                        <p class="text-[11px] text-gray-500 mt-1 truncate"><b>หมายเหตุ:</b> ${escapeHtml(item.note)}</p>
+                        <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-200/60 text-[10px]">
+                            <span class="text-gray-400 font-mono"><i class="fa-regular fa-clock mr-1 text-red-500"></i>${item.timestamp}</span>
+                            <div class="space-x-1.5">
+                                ${item.fileType === 'image' ? `<button onclick="openViewer('${item.fileData}', '${escapeHtml(item.title)}')" class="px-2 py-1 bg-white border border-gray-200 text-gray-700 rounded-md font-medium shadow-2xs hover:text-red-600"><i class="fa-solid fa-eye"></i> ดูรูป</button>` : ''}
+                                <button onclick="deleteRecord(${index})" class="px-2 py-1 bg-white border border-gray-200 text-red-600 rounded-md font-medium shadow-2xs hover:bg-red-50"><i class="fa-solid fa-trash"></i> ลบ</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+
+        function deleteRecord(index) {
+            if (confirm('คุณต้องการลบรายการเอกสารนี้ใช่หรือไม่?')) {
+                documentHistory.splice(index, 1);
+                localStorage.setItem('doc_history_v2', JSON.stringify(documentHistory));
+                renderHistoryList();
+            }
+        }
+
+        function openViewer(dataUrl, title) {
+            document.getElementById('viewerImage').src = dataUrl;
+            document.getElementById('viewerCaption').innerText = title;
+            document.getElementById('viewerModal').classList.remove('hidden');
+        }
+
+        function closeViewerModal() {
+            document.getElementById('viewerModal').classList.add('hidden');
+        }
+
+        function escapeHtml(text) {
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '#' };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
         }
     </script>
 </body>
 </html>
+```
