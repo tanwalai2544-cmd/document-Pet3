@@ -97,6 +97,21 @@
 
             <form id="docForm" onsubmit="handleSubmit(event)" class="p-5 sm:p-6 space-y-4">
                 
+                <!-- 1. Transaction ID Selection (บรรทัดแรกสุด ซิ้งค์ฐานข้อมูลสั่งของ) -->
+                <div class="space-y-1.5 bg-red-50/50 p-3.5 rounded-xl border border-red-100">
+                    <label class="block text-xs font-bold text-red-800" for="transactionId">
+                        <i class="fa-solid fa-link text-red-600 mr-1"></i> เลือกรหัสธุรกรรม (เชื่อมโยงฐานข้อมูลสั่งซื้อ) <span class="text-red-500">*</span>
+                    </label>
+                    <select id="transactionId" required
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-xs sm:text-sm transition bg-white font-mono">
+                        <option value="" disabled selected>--เลือกรหัสธุรกรรม / ออร์เดอร์สินค้า--</option>
+                        <option value="TXN-2026-90142 (ร้านสถานีสัตว์เลี้ยง - สั่งซื้ออาหารเม็ดแมว)">TXN-2026-90142 | สั่งซื้ออาหารเม็ดแมว (สถานีสัตว์เลี้ยง)</option>
+                        <option value="TXN-2026-90143 (นิธิพันธ์สัตวแพทย์ - เวชภัณฑ์และอุปกรณ์ผ่าตัด)">TXN-2026-90143 | เวชภัณฑ์และอุปกรณ์ผ่าตัด (นิธิพันธ์สัตวแพทย์)</option>
+                        <option value="TXN-2026-90144 (ร้านสถานีสัตว์เลี้ยง - อุปกรณ์กรงและของเล่นสัตว์)">TXN-2026-90144 | อุปกรณ์กรงและของเล่นสัตว์ (สถานีสัตว์เลี้ยง)</option>
+                        <option value="TXN-2026-90145 (ซื้อสดทั่วไป / อื่นๆ)">TXN-2026-90145 | ซื้อสดทั่วไป / ค่าใช้จ่ายเบ็ดเตล็ด</option>
+                    </select>
+                </div>
+
                 <!-- Document Title -->
                 <div class="space-y-1.5">
                     <label class="block text-xs font-bold text-gray-700" for="docTitle">
@@ -145,10 +160,10 @@
                         class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-xs sm:text-sm transition bg-gray-50/50"></textarea>
                 </div>
 
-                <!-- Capture / Upload Section -->
+                <!-- Capture / Upload Section (Supports up to 5 images & 5 PDFs) -->
                 <div class="space-y-2 pt-1">
                     <label class="block text-xs font-bold text-gray-700">
-                        <i class="fa-solid fa-camera-retro text-red-600 mr-1"></i> แนบหลักฐานเอกสาร (ถ่ายภาพหรืออัปโหลด) <span class="text-red-500">*</span>
+                        <i class="fa-solid fa-camera-retro text-red-600 mr-1"></i> แนบหลักฐานเอกสาร (รูปภาพสูงสุด 5 / ไฟล์ PDF สูงสุด 5) <span class="text-red-500">*</span>
                     </label>
                     
                     <div class="grid grid-cols-2 gap-3">
@@ -159,8 +174,8 @@
                                 <i class="fa-solid fa-camera text-sm"></i>
                             </div>
                             <div>
-                                <div class="text-xs font-bold">เปิดกล้องถ่ายภาพ</div>
-                                <div class="text-[10px] text-red-500 hidden sm:block">ใช้กล้องมือถือ/เว็บแคม</div>
+                                <div class="text-xs font-bold">ถ่ายภาพเพิ่ม</div>
+                                <div class="text-[10px] text-red-500 font-semibold" id="imgCountBadge">0 / 5 รูป</div>
                             </div>
                         </button>
 
@@ -170,31 +185,28 @@
                                 <i class="fa-solid fa-upload text-sm"></i>
                             </div>
                             <div>
-                                <div class="text-xs font-bold">อัปโหลดไฟล์</div>
-                                <div class="text-[10px] text-gray-500 hidden sm:block">JPG, PNG หรือ PDF</div>
+                                <div class="text-xs font-bold">อัปโหลดไฟล์เพิ่ม</div>
+                                <div class="text-[10px] text-gray-500 font-semibold" id="pdfCountBadge">0 / 5 ไฟล์</div>
                             </div>
-                            <input type="file" id="fileInput" accept="image/*,.pdf" class="hidden" onchange="handleFileSelect(event)">
+                            <input type="file" id="fileInput" accept="image/*,.pdf" multiple class="hidden" onchange="handleFileSelect(event)">
                         </label>
                     </div>
                 </div>
 
-                <!-- Preview Area -->
-                <div id="previewContainer" class="hidden space-y-2 p-3.5 bg-gray-50 rounded-2xl border border-gray-200">
+                <!-- Preview Area (Gallery for Multiple Files) -->
+                <div id="previewContainer" class="hidden space-y-3 p-3.5 bg-gray-50 rounded-2xl border border-gray-200">
                     <div class="flex justify-between items-center">
                         <span class="text-[11px] font-bold text-gray-600 uppercase tracking-wider flex items-center">
-                            <i class="fa-solid fa-eye text-red-600 mr-1.5"></i> ตัวอย่างหลักฐานที่แนบ
+                            <i class="fa-solid fa-eye text-red-600 mr-1.5"></i> รายการหลักฐานที่แนบทั้งหมด (<span id="totalFilesCount">0</span>)
                         </span>
-                        <button type="button" onclick="clearFile()" class="text-[11px] text-red-600 hover:text-red-800 font-semibold flex items-center bg-white px-2 py-0.5 rounded-lg border border-red-200 shadow-2xs transition">
-                            <i class="fa-solid fa-trash-can mr-1"></i> เปลี่ยนไฟล์
+                        <button type="button" onclick="clearAllFiles()" class="text-[11px] text-red-600 hover:text-red-800 font-semibold flex items-center bg-white px-2.5 py-1 rounded-lg border border-red-200 shadow-2xs transition">
+                            <i class="fa-solid fa-trash-can mr-1"></i> ล้างไฟล์ทั้งหมด
                         </button>
                     </div>
-                    <div class="relative rounded-xl overflow-hidden bg-black/5 flex items-center justify-center max-h-56 border border-gray-200">
-                        <img id="imagePreview" src="" alt="Preview" class="max-h-52 object-contain rounded-lg">
-                        <div id="pdfPreviewBadge" class="hidden flex-col items-center justify-center py-6 text-gray-600">
-                            <i class="fa-solid fa-file-pdf text-4xl text-red-600 mb-1.5"></i>
-                            <span id="fileNameDisplay" class="text-xs font-semibold px-2 text-center truncate max-w-xs">document.pdf</span>
-                            <span class="text-[10px] text-gray-400 mt-0.5">พร้อมบันทึกลง Google Drive</span>
-                        </div>
+                    
+                    <!-- Container for Images & PDFs Thumbnails -->
+                    <div id="attachmentsGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                        <!-- Dynamic items injected here -->
                     </div>
                 </div>
 
@@ -345,18 +357,19 @@
 
     <!-- JavaScript Logic -->
     <script>
-        // Global Variables
-        let currentFileData = null;
-        let currentFileType = null;
-        let currentFileName = '';
+        // Global Arrays for Multiple Files (Up to 5 images & 5 PDFs)
+        let attachedImages = []; // max 5
+        let attachedPdfs = [];   // max 5
+
         let mediaStream = null;
-        let documentHistory = JSON.parse(localStorage.getItem('doc_history_v2') || '[]');
+        let documentHistory = JSON.parse(localStorage.getItem('doc_history_multi_v1') || '[]');
 
         // Initialize App
         window.onload = function() {
             updateClock();
             setInterval(updateClock, 1000);
             renderHistoryList();
+            updateAttachmentUI();
         };
 
         // Realtime Clock & Timestamp
@@ -385,31 +398,53 @@
             }
         }
 
-        // File Selection Handler
+        // Multiple File Selection Handler (Max 5 Images & 5 PDFs)
         function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
 
-            currentFileName = file.name;
-            if (file.type.includes('image')) {
-                currentFileType = 'image';
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    currentFileData = e.target.result;
-                    showPreview(currentFileData, 'image');
-                };
-                reader.readAsDataURL(file);
-            } else if (file.type === 'application/pdf') {
-                currentFileType = 'pdf';
-                currentFileData = 'PDF_DOCUMENT';
-                showPreview(null, 'pdf', file.name);
-            } else {
-                alert('กรุณาเลือกไฟล์รูปภาพ (JPG, PNG) หรือไฟล์ PDF เท่านั้น');
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+
+                if (file.type.includes('image')) {
+                    if (attachedImages.length >= 5) {
+                        alert('คุณสามารถแนบรูปภาพได้สูงสุด 5 ภาพเท่านั้น');
+                        break;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        attachedImages.push({
+                            name: file.name,
+                            dataUrl: e.target.result,
+                            type: 'image'
+                        });
+                        updateAttachmentUI();
+                    };
+                    reader.readAsDataURL(file);
+                } else if (file.type === 'application/pdf') {
+                    if (attachedPdfs.length >= 5) {
+                        alert('คุณสามารถแนบไฟล์ PDF ได้สูงสุด 5 ไฟล์เท่านั้น');
+                        break;
+                    }
+                    attachedPdfs.push({
+                        name: file.name,
+                        dataUrl: 'PDF_DOCUMENT',
+                        type: 'pdf'
+                    });
+                    updateAttachmentUI();
+                } else {
+                    alert(`ไฟล์ "${file.name}" ไม่ใช่รูปภาพหรือ PDF ที่รองรับ`);
+                }
             }
+            event.target.value = ''; // Reset input
         }
 
         // Camera Modal Control
         async function openCameraModal() {
+            if (attachedImages.length >= 5) {
+                alert('คุณสามารถถ่ายภาพได้สูงสุด 5 ภาพแล้ว');
+                return;
+            }
             const modal = document.getElementById('cameraModal');
             modal.classList.remove('hidden');
             const video = document.getElementById('cameraVideo');
@@ -437,6 +472,12 @@
         }
 
         function capturePhoto() {
+            if (attachedImages.length >= 5) {
+                alert('ถ่ายภาพครบกำหนด 5 ภาพแล้ว');
+                closeCameraModal();
+                return;
+            }
+
             const video = document.getElementById('cameraVideo');
             const canvas = document.getElementById('cameraCanvas');
             
@@ -446,53 +487,97 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            currentFileData = canvas.toDataURL('image/jpeg', 0.85);
-            currentFileType = 'image';
-            currentFileName = `photo_capture_${Date.now()}.jpg`;
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            const fileName = `photo_capture_${Date.now()}.jpg`;
 
-            showPreview(currentFileData, 'image');
+            attachedImages.push({
+                name: fileName,
+                dataUrl: dataUrl,
+                type: 'image'
+            });
+
+            updateAttachmentUI();
             closeCameraModal();
         }
 
-        // Show Preview UI
-        function showPreview(dataUrl, type, name = '') {
+        // Update Attachment UI & Counters
+        function updateAttachmentUI() {
             const container = document.getElementById('previewContainer');
-            const imgEl = document.getElementById('imagePreview');
-            const pdfBadge = document.getElementById('pdfPreviewBadge');
-            const fileNameDisplay = document.getElementById('fileNameDisplay');
+            const grid = document.getElementById('attachmentsGrid');
+            const imgBadge = document.getElementById('imgCountBadge');
+            const pdfBadge = document.getElementById('pdfCountBadge');
+            const totalCountEl = document.getElementById('totalFilesCount');
+
+            imgBadge.innerText = `${attachedImages.length} / 5 รูป`;
+            pdfBadge.innerText = `${attachedPdfs.length} / 5 ไฟล์`;
+
+            const totalCount = attachedImages.length + attachedPdfs.length;
+            totalCountEl.innerText = totalCount;
+
+            if (totalCount === 0) {
+                container.classList.add('hidden');
+                grid.innerHTML = '';
+                return;
+            }
 
             container.classList.remove('hidden');
+            grid.innerHTML = '';
 
-            if (type === 'image') {
-                imgEl.src = dataUrl;
-                imgEl.classList.remove('hidden');
-                pdfBadge.classList.add('hidden');
-                pdfBadge.classList.remove('flex');
-            } else {
-                imgEl.classList.add('hidden');
-                pdfBadge.classList.remove('hidden');
-                pdfBadge.classList.add('flex');
-                fileNameDisplay.innerText = name;
-            }
+            // Render Images
+            attachedImages.forEach((img, idx) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'relative group rounded-xl overflow-hidden bg-black/5 border border-gray-200 h-24 flex items-center justify-center';
+                itemDiv.innerHTML = `
+                    <img src="${img.dataUrl}" class="w-full h-full object-cover cursor-pointer" onclick="openViewer('${img.dataUrl}', 'รูปภาพที่ ${idx + 1}: ${escapeHtml(img.name)}')">
+                    <div class="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[9px] px-1.5 py-0.5 truncate">ภาพที่ ${idx + 1}</div>
+                    <button type="button" onclick="removeAttachment('image', ${idx})" class="absolute top-1 right-1 w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-xs shadow hover:bg-red-700 transition">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                `;
+                grid.appendChild(itemDiv);
+            });
+
+            // Render PDFs
+            attachedPdfs.forEach((pdf, idx) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'relative group rounded-xl overflow-hidden bg-red-50 border border-red-200 h-24 flex flex-col items-center justify-center p-2 text-center';
+                itemDiv.innerHTML = `
+                    <i class="fa-solid fa-file-pdf text-2xl text-red-600 mb-1"></i>
+                    <span class="text-[10px] font-semibold text-gray-700 truncate w-full px-1">${escapeHtml(pdf.name)}</span>
+                    <span class="text-[9px] text-red-500">PDF (${idx + 1})</span>
+                    <button type="button" onclick="removeAttachment('pdf', ${idx})" class="absolute top-1 right-1 w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-xs shadow hover:bg-red-700 transition">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                `;
+                grid.appendChild(itemDiv);
+            });
         }
 
-        function clearFile() {
-            currentFileData = null;
-            currentFileType = null;
-            currentFileName = '';
-            document.getElementById('previewContainer').classList.add('hidden');
-            document.getElementById('fileInput').value = '';
+        function removeAttachment(type, index) {
+            if (type === 'image') {
+                attachedImages.splice(index, 1);
+            } else {
+                attachedPdfs.splice(index, 1);
+            }
+            updateAttachmentUI();
+        }
+
+        function clearAllFiles() {
+            attachedImages = [];
+            attachedPdfs = [];
+            updateAttachmentUI();
         }
 
         // Submit Form & Google Drive Simulation
         function handleSubmit(event) {
             event.preventDefault();
 
-            if (!currentFileData) {
-                alert('กรุณาแนบไฟล์หลักฐานเอกสาร (ถ่ายภาพหรืออัปโหลดไฟล์) ก่อนส่ง');
+            if (attachedImages.length === 0 && attachedPdfs.length === 0) {
+                alert('กรุณาแนบไฟล์หลักฐานเอกสาร (ถ่ายภาพหรืออัปโหลดไฟล์อย่างน้อย 1 รายการ) ก่อนส่ง');
                 return;
             }
 
+            const transactionId = document.getElementById('transactionId').value;
             const title = document.getElementById('docTitle').value;
             let type = document.getElementById('docType').value;
             if (type === 'อื่นๆ') {
@@ -527,20 +612,21 @@
             setTimeout(() => {
                 progressBar.style.width = '100%';
                 
-                // Save to History
+                // Save to History (รวมไฟล์ทั้งหมดใน Record เดียว)
                 const newRecord = {
                     id: 'DRV-' + Math.floor(10000 + Math.random() * 90000),
+                    transactionId: transactionId,
                     title: title,
                     type: type,
                     note: note || '-',
                     timestamp: timestamp,
-                    fileType: currentFileType,
-                    fileData: currentFileData,
-                    fileName: currentFileName || 'document_file'
+                    images: [...attachedImages],
+                    pdfs: [...attachedPdfs],
+                    totalCount: attachedImages.length + attachedPdfs.length
                 };
 
                 documentHistory.unshift(newRecord);
-                localStorage.setItem('doc_history_v2', JSON.stringify(documentHistory));
+                localStorage.setItem('doc_history_multi_v1', JSON.stringify(documentHistory));
                 renderHistoryList();
 
                 // Switch to success state
@@ -559,7 +645,7 @@
             // Reset form
             document.getElementById('docForm').reset();
             document.getElementById('customTypeContainer').classList.add('hidden');
-            clearFile();
+            clearAllFiles();
         }
 
         // History Modal Management (Mobile Card List layout)
@@ -590,32 +676,39 @@
 
             documentHistory.forEach((item, index) => {
                 const card = document.createElement('div');
-                card.className = 'bg-gray-50 border border-gray-200 rounded-xl p-3 flex items-start space-x-3 transition hover:bg-gray-100/70';
+                card.className = 'bg-gray-50 border border-gray-200 rounded-xl p-3.5 space-y-2 transition hover:bg-gray-100/70';
 
-                let thumbHtml = '';
-                if (item.fileType === 'image') {
-                    thumbHtml = `<img src="${item.fileData}" class="w-14 h-14 object-cover rounded-lg cursor-pointer border border-gray-200 shadow-2xs shrink-0" onclick="openViewer('${item.fileData}', '${escapeHtml(item.title)}')">`;
+                let firstThumb = '';
+                if (item.images && item.images.length > 0) {
+                    firstThumb = `<img src="${item.images[0].dataUrl}" class="w-14 h-14 object-cover rounded-lg cursor-pointer border border-gray-200 shadow-2xs shrink-0" onclick="openViewer('${item.images[0].dataUrl}', '${escapeHtml(item.title)}')">`;
+                } else if (item.pdfs && item.pdfs.length > 0) {
+                    firstThumb = `<div class="w-14 h-14 bg-red-50 text-red-600 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 border border-red-100"><i class="fa-solid fa-file-pdf text-2xl"></i></div>`;
                 } else {
-                    thumbHtml = `<div class="w-14 h-14 bg-red-50 text-red-600 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 border border-red-100"><i class="fa-solid fa-file-pdf text-2xl"></i></div>`;
+                    firstThumb = `<div class="w-14 h-14 bg-gray-200 text-gray-500 rounded-lg flex items-center justify-center font-bold text-xs shrink-0"><i class="fa-solid fa-file"></i></div>`;
                 }
 
                 card.innerHTML = `
-                    ${thumbHtml}
-                    <div class="flex-grow min-w-0">
-                        <div class="flex justify-between items-start">
-                            <h4 class="font-bold text-xs text-gray-900 truncate pr-2">${escapeHtml(item.title)}</h4>
-                            <span class="text-[10px] font-mono text-gray-400 shrink-0">${item.id}</span>
-                        </div>
-                        <div class="mt-0.5">
-                            <span class="inline-block bg-red-50 text-red-700 text-[10px] px-2 py-0.5 rounded font-semibold">${escapeHtml(item.type)}</span>
-                        </div>
-                        <p class="text-[11px] text-gray-500 mt-1 truncate"><b>หมายเหตุ:</b> ${escapeHtml(item.note)}</p>
-                        <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-200/60 text-[10px]">
-                            <span class="text-gray-400 font-mono"><i class="fa-regular fa-clock mr-1 text-red-500"></i>${item.timestamp}</span>
-                            <div class="space-x-1.5">
-                                ${item.fileType === 'image' ? `<button onclick="openViewer('${item.fileData}', '${escapeHtml(item.title)}')" class="px-2 py-1 bg-white border border-gray-200 text-gray-700 rounded-md font-medium shadow-2xs hover:text-red-600"><i class="fa-solid fa-eye"></i> ดูรูป</button>` : ''}
-                                <button onclick="deleteRecord(${index})" class="px-2 py-1 bg-white border border-gray-200 text-red-600 rounded-md font-medium shadow-2xs hover:bg-red-50"><i class="fa-solid fa-trash"></i> ลบ</button>
+                    <div class="flex items-start space-x-3">
+                        ${firstThumb}
+                        <div class="flex-grow min-w-0">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-xs text-gray-900 truncate pr-2">${escapeHtml(item.title)}</h4>
+                                <span class="text-[10px] font-mono text-gray-400 shrink-0">${item.id}</span>
                             </div>
+                            <div class="mt-0.5 flex flex-wrap gap-1">
+                                <span class="inline-block bg-red-50 text-red-700 text-[10px] px-2 py-0.5 rounded font-semibold">${escapeHtml(item.type)}</span>
+                                <span class="inline-block bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-mono">${escapeHtml(item.transactionId.split(' ')[0])}</span>
+                            </div>
+                            <p class="text-[10px] text-gray-500 mt-1 truncate"><b>หมายเหตุ:</b> ${escapeHtml(item.note)}</p>
+                        </div>
+                    </div>
+                    <div class="text-[10px] text-gray-600 bg-white p-2 rounded-lg border border-gray-200 font-mono">
+                        <div>📁 แนบไฟล์ทั้งหมด: <b>${item.totalCount || (item.images.length + item.pdfs.length)}</b> รายการ (รูปภาพ: ${item.images ? item.images.length : 0}, PDF: ${item.pdfs ? item.pdfs.length : 0})</div>
+                    </div>
+                    <div class="flex justify-between items-center pt-2 border-t border-gray-200/60 text-[10px]">
+                        <span class="text-gray-400 font-mono"><i class="fa-regular fa-clock mr-1 text-red-500"></i>${item.timestamp}</span>
+                        <div class="space-x-1.5">
+                            <button onclick="deleteRecord(${index})" class="px-2.5 py-1 bg-white border border-gray-200 text-red-600 rounded-md font-medium shadow-2xs hover:bg-red-50"><i class="fa-solid fa-trash"></i> ลบรายการ</button>
                         </div>
                     </div>
                 `;
@@ -626,7 +719,7 @@
         function deleteRecord(index) {
             if (confirm('คุณต้องการลบรายการเอกสารนี้ใช่หรือไม่?')) {
                 documentHistory.splice(index, 1);
-                localStorage.setItem('doc_history_v2', JSON.stringify(documentHistory));
+                localStorage.setItem('doc_history_multi_v1', JSON.stringify(documentHistory));
                 renderHistoryList();
             }
         }
@@ -648,4 +741,3 @@
     </script>
 </body>
 </html>
-```
